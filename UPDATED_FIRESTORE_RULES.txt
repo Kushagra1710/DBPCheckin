@@ -1,0 +1,51 @@
+# Updated Firestore Security Rules
+
+It seems the previous rules might be causing permission issues. Please update your Firestore Rules to the following, which uses a helper function for better reliability.
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Navigate to **Firestore Database** > **Rules**.
+3. Replace the content with:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admins can read all profiles and write to them
+      allow read, write: if isAdmin();
+    }
+
+    // Groups
+    match /groups/{groupId} {
+      // Authenticated users can read groups
+      allow read: if request.auth != null;
+      // Only admins can write groups
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+4. Click **Publish**.
+
+## Troubleshooting
+If you still see "Error fetching employees":
+1. Ensure your Admin user document in the `users` collection has the field `role` set to the string `"admin"` (lowercase, no spaces).
+2. Ensure the document ID of the admin user matches their Authentication UID.
+
