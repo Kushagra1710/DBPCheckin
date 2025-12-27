@@ -24,5 +24,8 @@ data class Group(
     val endTime: String,
 
     @SerialName("radius")
-    val radius: Double = 100.0
+    val radius: Double = 100.0,
+
+    @SerialName("is_location_restricted")
+    val isLocationRestricted: Boolean = true
 )

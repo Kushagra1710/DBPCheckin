@@ -24,21 +24,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.border
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.dbpsecurity.dbpcheckin.data.SupabaseClient
 import com.dbpsecurity.dbpcheckin.models.Profile
+import com.dbpsecurity.dbpcheckin.models.Group
 import com.dbpsecurity.dbpcheckin.ui.theme.Primary
 import com.dbpsecurity.dbpcheckin.ui.theme.Secondary
 import com.dbpsecurity.dbpcheckin.ui.theme.White
 import com.dbpsecurity.dbpcheckin.ui.theme.Accent
+import com.dbpsecurity.dbpcheckin.ui.theme.Black
+import com.dbpsecurity.dbpcheckin.ui.theme.Error
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
@@ -54,9 +60,16 @@ fun SignUpScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var selectedTehsil by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var selectedSeating by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    val tehsils = listOf("Tehsil A", "Tehsil B", "Tehsil C", "Tehsil D")
+    val seatings = listOf("Sanchi", "Gairatganj", "Begamganj", "Silwani", "Udaipura", "Badi/bareli", "Obedullaganj")
+
+    // Department Selection State
+    var groups by remember { mutableStateOf<List<Group>>(emptyList()) }
+    var selectedGroup by remember { mutableStateOf<Group?>(null) }
+    var groupExpanded by remember { mutableStateOf(false) }
+    var isGroupsLoading by remember { mutableStateOf(true) }
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var photoFile by remember { mutableStateOf<File?>(null) }
@@ -66,6 +79,50 @@ fun SignUpScreen(navController: NavController) {
     val context = LocalContext.current
     val supabase = SupabaseClient.client
     val scope = rememberCoroutineScope()
+    val fixedLightScheme = lightColorScheme(
+        primary = Primary,
+        secondary = Secondary,
+        tertiary = Accent,
+        background = Color(0xFFFAFAFA),
+        surface = White,
+        onPrimary = White,
+        onSecondary = Black,
+        onTertiary = Black,
+        error = Error,
+        onError = White,
+        errorContainer = Color(0xFFFFDADA),
+        onErrorContainer = Error
+    )
+    val signUpFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = fixedLightScheme.primary,
+        unfocusedBorderColor = fixedLightScheme.outline,
+        focusedLabelColor = fixedLightScheme.primary,
+        unfocusedLabelColor = fixedLightScheme.onSurfaceVariant,
+        cursorColor = fixedLightScheme.primary,
+        focusedTextColor = fixedLightScheme.onSurface,
+        unfocusedTextColor = fixedLightScheme.onSurface,
+        focusedLeadingIconColor = fixedLightScheme.primary,
+        unfocusedLeadingIconColor = fixedLightScheme.onSurfaceVariant,
+        focusedTrailingIconColor = fixedLightScheme.primary,
+        unfocusedTrailingIconColor = fixedLightScheme.onSurfaceVariant,
+        disabledBorderColor = fixedLightScheme.outline,
+        disabledLabelColor = fixedLightScheme.onSurfaceVariant,
+        disabledTextColor = fixedLightScheme.onSurface,
+        disabledLeadingIconColor = fixedLightScheme.onSurfaceVariant,
+        disabledTrailingIconColor = fixedLightScheme.onSurfaceVariant
+    )
+
+    // Fetch Groups
+    LaunchedEffect(Unit) {
+        try {
+            val fetchedGroups = supabase.from("groups").select().decodeList<Group>()
+            groups = fetchedGroups.sortedBy { it.name.lowercase(Locale.getDefault()) }
+        } catch (e: Exception) {
+            Log.e("SignUpScreen", "Error fetching groups", e)
+        } finally {
+            isGroupsLoading = false
+        }
+    }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -200,18 +257,20 @@ fun SignUpScreen(navController: NavController) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Full Name") },
+                    label = { Text("Full Name *") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Name") },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = signUpFieldColors,
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email Address") },
+                    label = { Text("Email Address *") },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = signUpFieldColors,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     singleLine = true
                 )
@@ -219,9 +278,10 @@ fun SignUpScreen(navController: NavController) {
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
-                    label = { Text("Phone Number") },
+                    label = { Text("Phone Number *") },
                     leadingIcon = { Icon(Icons.Default.Phone, contentDescription = "Phone") },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = signUpFieldColors,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true
                 )
@@ -229,34 +289,98 @@ fun SignUpScreen(navController: NavController) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text("Password *") },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible)
+                            Icons.Filled.Visibility
+                        else
+                            Icons.Filled.VisibilityOff
+
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = description)
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
+                    colors = signUpFieldColors,
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Seating Dropdown
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = selectedTehsil,
+                        value = selectedSeating,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Select Tehsil") },
-                        leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Tehsil") },
+                        label = { Text("Select Seating *") },
+                        leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = "Seating") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = signUpFieldColors
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        tehsils.forEach { tehsil ->
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.background(White) // ensure dropdown is visible
+                    ) {
+                        seatings.forEach { seating ->
                             DropdownMenuItem(
-                                text = { Text(text = tehsil) },
+                                text = { Text(text = seating, color = fixedLightScheme.onSurface) },
                                 onClick = {
-                                    selectedTehsil = tehsil
+                                    selectedSeating = seating
                                     expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Department Selection Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = groupExpanded,
+                    onExpandedChange = {
+                        if (!isGroupsLoading && groups.isNotEmpty()) {
+                            groupExpanded = !groupExpanded
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = when {
+                            isGroupsLoading -> "Loading departments..."
+                            groups.isEmpty() -> "No departments available"
+                            else -> selectedGroup?.name ?: ""
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Select Department *") },
+                        leadingIcon = { Icon(Icons.Default.Group, contentDescription = "Department") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = signUpFieldColors,
+                        enabled = !isGroupsLoading && groups.isNotEmpty()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = groupExpanded,
+                        onDismissRequest = { groupExpanded = false },
+                        modifier = Modifier.background(White)
+                    ) {
+                        groups.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(text = group.name, color = fixedLightScheme.onSurface) },
+                                onClick = {
+                                    selectedGroup = group
+                                    groupExpanded = false
                                 }
                             )
                         }
@@ -269,7 +393,7 @@ fun SignUpScreen(navController: NavController) {
 
         Button(
             onClick = {
-                if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && phone.length == 10 && selectedTehsil.isNotEmpty() && photoFile != null) {
+                if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && phone.length == 10 && selectedSeating.isNotEmpty() && photoFile != null && selectedGroup != null) {
                     isLoading = true
                     FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
                         .addOnSuccessListener { authResult ->
@@ -288,15 +412,17 @@ fun SignUpScreen(navController: NavController) {
                                             "name" to name,
                                             "email" to email,
                                             "phone" to phone,
-                                            "tehsil" to selectedTehsil,
+                                            "tehsil" to selectedSeating, // Map seating to tehsil column
                                             "image_url" to imageUrl,
                                             "role" to "employee",
-                                            "group_id" to null
+                                            "group_id" to null,
+                                            "requested_group_id" to selectedGroup?.id,
+                                            "request_status" to "pending"
                                         )
                                         supabase.from("profiles").insert(profileData)
 
                                         isLoading = false
-                                        Toast.makeText(context, "Sign Up Successful!", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Sign Up Successful! Please wait for admin approval.", Toast.LENGTH_LONG).show()
                                         navController.navigate("signin") {
                                             popUpTo("signup") { inclusive = true }
                                         }
@@ -314,7 +440,7 @@ fun SignUpScreen(navController: NavController) {
                             Toast.makeText(context, "Sign Up Failed: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                 } else {
-                    Toast.makeText(context, "Please fill all fields and take a photo", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please fill all fields (including Department) and take a photo", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -336,4 +462,3 @@ fun SignUpScreen(navController: NavController) {
         }
     }
 }
-

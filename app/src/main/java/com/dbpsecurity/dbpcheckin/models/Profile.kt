@@ -18,7 +18,7 @@ data class Profile(
     val phone: String? = null,
 
     @SerialName("tehsil")
-    val tehsil: String? = null,
+    val seating: String? = null,
 
     @SerialName("image_url")
     val imageUrl: String? = null,
@@ -27,6 +27,11 @@ data class Profile(
     val role: String = "employee",
 
     @SerialName("group_id")
-    val groupId: String? = null
-)
+    val groupId: String? = null,
 
+    @SerialName("requested_group_id")
+    val requestedGroupId: String? = null,
+
+    @SerialName("request_status")
+    val requestStatus: String? = "none" // 'none', 'pending', 'approved', 'rejected'
+)

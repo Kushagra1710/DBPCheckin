@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
                         composable("admin_home") { AdminHomeScreen(navController) }
                         composable("admin_management") { AdminManagementScreen(navController) }
                         composable("admin_profile") { AdminProfileScreen(navController) }
+                        composable("admin_requests") { AdminRequestsScreen(navController) }
+                        composable("admin_download_attendance") { AdminDownloadAttendanceScreen(navController) }
                         composable("employee_home") { EmployeeHomeScreen(navController) }
                         composable("employee_profile") { EmployeeProfileScreen(navController) }
                         composable("face_detection") { FaceDetectionScreen(navController) }

@@ -13,10 +13,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Group // Add this import
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.dbpsecurity.dbpcheckin.data.SupabaseClient
+import com.dbpsecurity.dbpcheckin.models.Group // Add this import
 import com.dbpsecurity.dbpcheckin.models.Profile
 import com.dbpsecurity.dbpcheckin.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -40,6 +44,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(navController: NavController) {
     val context = LocalContext.current
@@ -48,10 +53,14 @@ fun UserProfileScreen(navController: NavController) {
 
     var userProfile by remember { mutableStateOf<Profile?>(null) }
     var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var seating by remember { mutableStateOf("") }
+    var departmentName by remember { mutableStateOf("Loading...") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -118,7 +127,25 @@ fun UserProfileScreen(navController: NavController) {
             }.decodeSingle<Profile>()
             userProfile = profile
             name = profile.name ?: ""
+            email = profile.email ?: ""
             phone = profile.phone ?: ""
+            seating = profile.seating ?: ""
+
+            // Fetch Department Name
+            if (profile.groupId != null) {
+                val group = supabase.from("groups").select {
+                    filter { eq("id", profile.groupId) }
+                }.decodeSingleOrNull<Group>()
+                departmentName = group?.name ?: "Unknown Department"
+            } else if (profile.requestedGroupId != null) {
+                val group = supabase.from("groups").select {
+                    filter { eq("id", profile.requestedGroupId) }
+                }.decodeSingleOrNull<Group>()
+                departmentName = "${group?.name ?: "Unknown"} (Requested)"
+            } else {
+                departmentName = "Not Assigned"
+            }
+
             isLoading = false
         } catch (e: Exception) {
             isLoading = false
@@ -195,7 +222,42 @@ fun UserProfileScreen(navController: NavController) {
                             onValueChange = { name = it },
                             label = { Text("Full Name") },
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = {},
+                            label = { Text("Email Address") },
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey,
+                                disabledBorderColor = DarkGrey,
+                                disabledLabelColor = DarkGrey,
+                                disabledTextColor = Black,
+                                disabledLeadingIconColor = DarkGrey
+                            )
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
@@ -203,7 +265,66 @@ fun UserProfileScreen(navController: NavController) {
                             onValueChange = { phone = it },
                             label = { Text("Phone Number") },
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = seating,
+                            onValueChange = {},
+                            label = { Text("Seating") },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey,
+                                disabledBorderColor = DarkGrey,
+                                disabledLabelColor = DarkGrey,
+                                disabledTextColor = Black,
+                                disabledLeadingIconColor = DarkGrey
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = departmentName,
+                            onValueChange = {},
+                            label = { Text("Department") },
+                            leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey,
+                                disabledBorderColor = DarkGrey,
+                                disabledLabelColor = DarkGrey,
+                                disabledTextColor = Black,
+                                disabledLeadingIconColor = DarkGrey
+                            )
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                         Button(
@@ -222,7 +343,11 @@ fun UserProfileScreen(navController: NavController) {
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary,
+                                contentColor = White
+                            )
                         ) {
                             Text("Save Changes")
                         }
@@ -243,7 +368,18 @@ fun UserProfileScreen(navController: NavController) {
                             label = { Text("New Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey
+                            )
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
@@ -252,7 +388,18 @@ fun UserProfileScreen(navController: NavController) {
                             label = { Text("Confirm New Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = DarkGrey,
+                                focusedLabelColor = Primary,
+                                unfocusedLabelColor = DarkGrey,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black,
+                                cursorColor = Primary,
+                                focusedLeadingIconColor = Primary,
+                                unfocusedLeadingIconColor = DarkGrey
+                            )
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                         Button(
@@ -277,7 +424,11 @@ fun UserProfileScreen(navController: NavController) {
                                     Toast.makeText(context, "Passwords do not match or are empty.", Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary,
+                                contentColor = White
+                            )
                         ) {
                             Text("Update Password")
                         }
@@ -286,19 +437,43 @@ fun UserProfileScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                TextButton(onClick = {
-                    scope.launch {
-                        FirebaseAuth.getInstance().signOut()
-                        navController.navigate("signin") {
-                            popUpTo(0)
-                        }
-                    }
-                }) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = "Sign Out", tint = White)
+                TextButton(onClick = { showSignOutDialog = true }) {
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out", tint = White)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Sign Out", color = White, fontWeight = FontWeight.Bold)
                 }
             }
         }
+    }
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out", fontWeight = FontWeight.Bold, color = Primary) },
+            text = { Text("Are you sure you want to sign out?", color = Black) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSignOutDialog = false
+                        scope.launch {
+                            FirebaseAuth.getInstance().signOut()
+                            navController.navigate("signin") {
+                                popUpTo(0)
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Error, contentColor = White)
+                ) {
+                    Text("Sign Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel", color = DarkGrey)
+                }
+            },
+            containerColor = White,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }

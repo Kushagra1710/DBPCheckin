@@ -27,6 +27,8 @@ import com.dbpsecurity.dbpcheckin.ui.theme.Primary
 import com.dbpsecurity.dbpcheckin.ui.theme.Secondary
 import com.dbpsecurity.dbpcheckin.ui.theme.White
 import com.dbpsecurity.dbpcheckin.ui.theme.Accent
+import com.dbpsecurity.dbpcheckin.ui.theme.Black
+import com.dbpsecurity.dbpcheckin.ui.theme.DarkGrey
 import com.google.firebase.auth.FirebaseAuth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.launch
@@ -36,6 +38,7 @@ fun SignInScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val supabase = SupabaseClient.client
     val scope = rememberCoroutineScope()
@@ -128,7 +131,11 @@ fun SignInScreen(navController: NavController) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Primary,
                             focusedLabelColor = Primary,
-                            cursorColor = Primary
+                            cursorColor = Primary,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black,
+                            unfocusedLabelColor = DarkGrey,
+                            unfocusedBorderColor = DarkGrey
                         ),
                         singleLine = true
                     )
@@ -147,10 +154,27 @@ fun SignInScreen(navController: NavController) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Primary,
                             focusedLabelColor = Primary,
-                            cursorColor = Primary
+                            cursorColor = Primary,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black,
+                            unfocusedLabelColor = DarkGrey,
+                            unfocusedBorderColor = DarkGrey
                         ),
                         singleLine = true
                     )
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        TextButton(onClick = { showForgotPasswordDialog = true }) {
+                            Text(
+                                text = "Forgot Password?",
+                                color = Primary,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -249,5 +273,50 @@ fun SignInScreen(navController: NavController) {
                 }
             }
         }
+    }
+
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showForgotPasswordDialog = false },
+            title = { Text("Reset Password") },
+            text = {
+                Column {
+                    Text("Enter your email address to receive a password reset link.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (email.isNotEmpty()) {
+                            FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Reset email sent to $email", Toast.LENGTH_LONG).show()
+                                    showForgotPasswordDialog = false
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                        } else {
+                            Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgotPasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

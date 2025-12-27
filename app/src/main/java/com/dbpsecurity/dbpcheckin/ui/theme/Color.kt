@@ -20,13 +20,13 @@ val AccentLight = Color(0xFFFFB74D)
 val White = Color(0xFFFFFFFF)
 val LightGrey = Color(0xFFF5F5F5)
 val MediumGrey = Color(0xFFE0E0E0)
-val DarkGrey = Color(0xFF616161)
+val DarkGrey = Color(0xFF757575)
 val Black = Color(0xFF212121)
 
 // Status Colors
-val Success = Color(0xFF4CAF50)
-val Error = Color(0xFFF44336)
-val Warning = Color(0xFFFFC107)
+val Success = Color(0xFF66BB6A)
+val Error = Color(0xFFEF5350) // Soft Red
+val Warning = Color(0xFFFFA726)
 
 // For backward compatibility
 val Purple80 = PrimaryLight

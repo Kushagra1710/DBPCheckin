@@ -15,27 +15,29 @@ import kotlin.math.sqrt
 class FaceRecognitionHelper(context: Context) {
 
     private var interpreter: Interpreter? = null
-    private val inputImageSize = 112 // MobileFaceNet standard input size
-    private val outputEmbeddingSize = 192 // MobileFaceNet standard output size
+    private var initError: Throwable? = null
+    private val inputImageSize = 160 // FaceNet standard input size
+    private val outputEmbeddingSize = 128 // FaceNet standard output size
 
     init {
         try {
-            val modelFile = FileUtil.loadMappedFile(context, "mobile_face_net.tflite")
+            val modelFile = FileUtil.loadMappedFile(context, "facenet.tflite")
             val options = Interpreter.Options()
             interpreter = Interpreter(modelFile, options)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            initError = e
             e.printStackTrace()
         }
     }
 
     fun getFaceEmbedding(bitmap: Bitmap): FloatArray {
         if (interpreter == null) {
-            throw IllegalStateException("TFLite Interpreter is not initialized. Check if model file exists.")
+            throw IllegalStateException("TFLite Interpreter is not initialized. Error: ${initError?.message}", initError)
         }
 
         val imageProcessor = ImageProcessor.Builder()
             .add(ResizeOp(inputImageSize, inputImageSize, ResizeOp.ResizeMethod.BILINEAR))
-            .add(NormalizeOp(127.5f, 128.0f)) // Normalize to [-1, 1]
+            .add(NormalizeOp(127.5f, 127.5f)) // Normalize to [-1, 1]
             .build()
 
         var tensorImage = TensorImage(DataType.FLOAT32)
@@ -45,15 +47,24 @@ class FaceRecognitionHelper(context: Context) {
         val outputBuffer = ByteBuffer.allocateDirect(outputEmbeddingSize * 4) // 4 bytes per float
         outputBuffer.order(java.nio.ByteOrder.nativeOrder())
 
-        // The model expects [1, 112, 112, 3] input and outputs [1, 192]
-        // TensorImage handles the input shape automatically if it matches
-        // But we need to be careful about the output container.
-        // Interpreter.run accepts Object input and Object output.
-
+        // The model expects [1, 160, 160, 3] input and outputs [1, 128]
         val outputArray = Array(1) { FloatArray(outputEmbeddingSize) }
         interpreter?.run(tensorImage.buffer, outputArray)
 
-        return outputArray[0]
+        val normalized = l2Normalize(outputArray[0])
+        android.util.Log.d("FaceRecognitionHelper", "Embedding: ${normalized.take(5).joinToString(", ")}...")
+        return normalized
+    }
+
+    private fun l2Normalize(embedding: FloatArray): FloatArray {
+        var sum = 0.0f
+        for (value in embedding) {
+            sum += value * value
+        }
+        val norm = sqrt(sum)
+        if (norm == 0f) return embedding // Avoid division by zero
+
+        return FloatArray(embedding.size) { i -> embedding[i] / norm }
     }
 
     fun calculateDistance(embedding1: FloatArray, embedding2: FloatArray): Float {
@@ -69,4 +80,3 @@ class FaceRecognitionHelper(context: Context) {
         interpreter?.close()
     }
 }
-

@@ -10,8 +10,8 @@ import kotlinx.serialization.json.Json
 
 object SupabaseClient {
 
-    private const val SUPABASE_URL = "https://ecfdcwimlkxalebqxxvk.supabase.co"
-    private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjZmRjd2ltbGt4YWxlYnF4eHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzMjUwNDYsImV4cCI6MjA4MTkwMTA0Nn0.DZVpgR6fjMdEFsXYxz-3PvEuAYNzNmBkj1DJXQEtcu4"
+    private const val SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
+    private const val SUPABASE_ANON_KEY = "SUPABASE_ANON_KEY"
 
     val client: SupabaseClient = createSupabaseClient(
         supabaseUrl = SUPABASE_URL,

@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.sql
+!FINAL_DB_SCHEMA.sql
