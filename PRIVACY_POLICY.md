@@ -85,6 +85,6 @@ We may update our Privacy Policy from time to time. We will notify you of any ch
 
 If you have any questions about this Privacy Policy, please contact us at:
 
-*   **Email:** [Insert Support Email Here]
-*   **Address:** [Insert Address Here]
+*   **Email:** s4717901@gmail.com
+*   **Address:** Ward no 15 Arjun Nagar Raisen City Raisen Raisen MP 464551 IN
 
